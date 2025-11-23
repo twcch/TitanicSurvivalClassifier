@@ -66,6 +66,22 @@ class MLPipeline:
         self.model.train((X, y))
 
         self.model.save_model("outputs/decision_tree_model.pkl")
+        
+        # 視覺化決策樹
+        print("\n" + "=" * 50)
+        print("生成視覺化圖表...")
+        print("=" * 50)
+        self.model.visualize_tree("outputs/decision_tree.png")
+        self.model.visualize_feature_importance("outputs/feature_importance.png")
+        
+        # 11. 印出特徵重要性
+        importance = self.model.get_feature_importance(top_n=10)
+        if importance:
+            print("\n特徵重要性 (Top 10):")
+            print("-" * 50)
+            for i, (feature, score) in enumerate(importance.items(), 1):
+                print(f"{i:2d}. {feature:30s}: {score:.4f}")
+            print("=" * 50 + "\n")
 
     def run_inference_pipeline(self, model_path: str, test_path: str, output_path: str = "outputs/submission.csv"):
         # 載入測試資料
