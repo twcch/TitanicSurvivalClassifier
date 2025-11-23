@@ -1,4 +1,4 @@
-# Titanic Survival Classifer
+# Titanic Survival Classifier
 
 > 機器學習實戰專案｜模組化設計 × 設定檔驅動 × 結構清晰  
 > 本專案為一個以 Titanic 生存預測競賽為藍本的機器學習實戰練習，聚焦於模組化設計、工程化流程與設定檔驅動開發，展示我作為資料分析師轉型資料科學家所需之工程能力與架構設計思維
