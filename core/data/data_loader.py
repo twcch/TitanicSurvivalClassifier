@@ -2,8 +2,8 @@ import pandas as pd
 
 
 class DataLoader:
-    def __init__(self, data_source):
-        self.data_source = data_source
+    def __init__(self):
+        pass
 
     def load_data(self, file_path: str) -> pd.DataFrame:
         data = pd.read_csv(file_path)
