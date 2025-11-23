@@ -18,8 +18,8 @@ class DecisionTreeClassifierModel(BaseModel):
         X_test, y_test = test_data
         return self.model.score(X_test, y_test)
 
-    def save(self, file_path):
+    def save_model(self, file_path):
         joblib.dump(self.model, file_path)
 
-    def load(self, file_path):
+    def load_model(self, file_path):
         self.model = joblib.load(file_path)

@@ -18,11 +18,11 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def save(self, file_path):
+    def save_model(self, file_path):
         """Save the model to the specified file path."""
         pass
 
     @abstractmethod
-    def load(self, file_path):
+    def load_model(self, file_path):
         """Load the model from the specified file path."""
         pass
