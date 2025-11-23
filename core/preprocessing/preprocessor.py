@@ -25,15 +25,29 @@ class MissingValueHandler(BasePreprocessor):
         self.fill_values = {}
 
     def fit(self, X: pd.DataFrame) -> "MissingValueHandler":
-        for column in X.columns:
-            if self.strategy == "mean":
-                self.fill_values[column] = X[column].mean()
-            elif self.strategy == "median":
-                self.fill_values[column] = X[column].median()
-            elif self.strategy == "mode":
-                self.fill_values[column] = X[column].mode()[0]
-            else:
-                raise ValueError(f"Unknown strategy: {self.strategy}")
+        # 只處理數值型欄位
+        numeric_columns = X.select_dtypes(include=["number"]).columns
+        
+        for column in numeric_columns:
+            if X[column].isnull().any():
+                if self.strategy == "mean":
+                    self.fill_values[column] = X[column].mean()
+                elif self.strategy == "median":
+                    self.fill_values[column] = X[column].median()
+                elif self.strategy == "mode":
+                    self.fill_values[column] = X[column].mode()[0]
+                elif self.strategy == "constant":
+                    self.fill_values[column] = self.fill_value
+        
+        # 處理類別型欄位（用 mode 或 'Unknown'）
+        categorical_columns = X.select_dtypes(include=["object", "category"]).columns
+        for column in categorical_columns:
+            if X[column].isnull().any():
+                if X[column].mode().empty:
+                    self.fill_values[column] = "Unknown"
+                else:
+                    self.fill_values[column] = X[column].mode()[0]
+        
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
