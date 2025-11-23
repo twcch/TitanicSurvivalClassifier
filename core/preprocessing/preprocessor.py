@@ -100,7 +100,7 @@ class PreprocessingPipeline(BasePreprocessor):
     def fit(self, X: pd.DataFrame) -> "PreprocessingPipeline":
         for step in self.steps:
             step.fit(X)
-            X = step.transform(X)
+            X = step.fit(X)
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
