@@ -1,3 +1,4 @@
+import pandas as pd
 from core.data.data_loader import DataLoader
 from core.preprocessing.preprocessor import (
     PreprocessingPipeline,
@@ -66,11 +67,38 @@ class MLPipeline:
 
         self.model.save_model("outputs/decision_tree_model.pkl")
 
-    def run_inference_pipeline(self, model_path: str, test_path: str):
+    def run_inference_pipeline(self, model_path: str, test_path: str, output_path: str = "outputs/submission.csv"):
+        # 載入測試資料
         df = self.data_loader.load_data(test_path)
+        
+        # 保存 PassengerId
+        passenger_ids = df["PassengerId"].copy()
+        
+        # 移除 PassengerId 進行預測
+        if "PassengerId" in df.columns:
+            df = df.drop(columns=["PassengerId"])
+        
+        # 前處理和特徵工程
         df = self.preprocessing_pipeline.transform(df)
         df = self.feature_engineer_pipeline.transform(df)
 
+        # 載入模型並預測
         self.model.load_model(model_path)
         predictions = self.model.predict(df)
-
+        
+        # 建立提交檔案
+        submission = pd.DataFrame({
+            'PassengerId': passenger_ids,
+            'Survived': predictions
+        })
+        
+        # 儲存結果
+        submission.to_csv(output_path, index=False)
+        print(f"\n✅ 預測完成！結果已儲存至 {output_path}")
+        print(f"\n預測結果前 10 筆：")
+        print(submission.head(10))
+        print(f"\n總共預測 {len(submission)} 筆資料")
+        print(f"預測存活人數: {submission['Survived'].sum()}")
+        print(f"預測死亡人數: {(submission['Survived'] == 0).sum()}")
+        
+        return submission
