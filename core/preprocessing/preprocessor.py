@@ -79,6 +79,20 @@ class OutilerHandler(BasePreprocessor):
         return self.fit(X).transform(X)
 
 
+class DropColumnsPreprocessor(BasePreprocessor):
+    def __init__(self, columns_to_drop: list[str]):
+        self.columns_to_drop = columns_to_drop
+
+    def fit(self, X: pd.DataFrame) -> "DropColumnsPreprocessor":
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        return X.drop(columns=self.columns_to_drop, errors="ignore")
+
+    def fit_transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        return self.fit(X).transform(X)
+
+
 class PreprocessingPipeline(BasePreprocessor):
     def __init__(self, steps: list[BasePreprocessor]):
         self.steps = steps
