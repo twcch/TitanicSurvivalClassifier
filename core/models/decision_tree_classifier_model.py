@@ -1,12 +1,24 @@
 import joblib
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+)
 from core.models.base_model import BaseModel
 
 
 class DecisionTreeClassifierModel(BaseModel):
     def __init__(self):
-        self.model = DecisionTreeClassifier()
+        self.model = DecisionTreeClassifier(
+            criterion="gini",
+            max_depth=5,
+            min_samples_split=2,
+            min_samples_leaf=1,
+            random_state=42,
+        )
 
     def train(self, data):
         X, y = data
