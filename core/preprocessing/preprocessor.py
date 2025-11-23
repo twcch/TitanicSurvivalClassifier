@@ -51,10 +51,11 @@ class MissingValueHandler(BasePreprocessor):
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        X_filled = X.copy()
-        for column, value in self.fill_values.items():
-            X_filled[column].fillna(value, inplace=True)
-        return X_filled
+        X = X.copy()
+        for column, fill_value in self.fill_values.items():
+            if column in X.columns:
+                X[column] = X[column].fillna(fill_value)
+        return X
 
     def fit_transform(self, X: pd.DataFrame) -> pd.DataFrame:
         return self.fit(X).transform(X)
