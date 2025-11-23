@@ -64,7 +64,7 @@ class MLPipeline:
 
         self.model.train((X, y))
 
-        self.model.save_model("decision_tree_model.pkl")
+        self.model.save_model("outputs/decision_tree_model.pkl")
 
     def run_inference_pipeline(self, model_path: str, test_path: str):
         df = self.data_loader.load_data(test_path)
