@@ -1,6 +1,7 @@
+from core.models.base_model import BaseModel
 from core.models.decision_tree_classifier_model import DecisionTreeClassifierModel
 from core.models.random_forest_classifier_model import RandomForestClassifierModel
-from core.models.base_model import BaseModel
+from core.models.xgboost_model import XGBoostModel
 
 
 class ModelFactory:
@@ -31,8 +32,8 @@ class ModelFactory:
         models = {
             "decision_tree": DecisionTreeClassifierModel,
             "random_forest": RandomForestClassifierModel,
+            "xgboost": XGBoostModel,
             # 未來可以繼續添加
-            # "xgboost": XGBoostModel,
             # "logistic_regression": LogisticRegressionModel,
             # "svm": SVMModel,
         }

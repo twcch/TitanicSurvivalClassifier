@@ -15,6 +15,7 @@ from core.features.feature_engineer import (
 from core.models.model_factory import ModelFactory
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+import xgboost as xgb
 from sklearn.model_selection import train_test_split
 
 
@@ -29,7 +30,7 @@ class MLPipeline:
         初始化 ML Pipeline
 
         Args:
-            model_type: 模型類型 ("decision_tree", "random_forest", 等)
+            model_type: 模型類型 ("decision_tree", "random_forest", "xgboost", 等)
             use_tuning: 是否使用超參數調優
             tuning_method: 調優方法 ("grid" 或 "random")
         """
@@ -124,6 +125,8 @@ class MLPipeline:
                 best_model = DecisionTreeClassifier(**self.model.best_params)
             elif self.model_type == "random_forest":
                 best_model = RandomForestClassifier(**self.model.best_params)
+            elif self.model_type == "xgboost":
+                best_model = xgb.XGBClassifier(**self.model.best_params)
             else:
                 best_model = self.model.model.__class__(**self.model.best_params)
 
@@ -151,6 +154,13 @@ class MLPipeline:
 
         self.model.visualize_tree(tree_path)
         self.model.visualize_feature_importance(importance_path)
+        
+        # XGBoost 額外的視覺化
+        if self.model_type == "xgboost":
+            xgb_importance_path = os.path.join(
+                self.experiment_dir, "xgboost_importance_plot.png"
+            )
+            self.model.plot_importance(xgb_importance_path)
 
         # 特徵重要性
         importance = self.model.get_feature_importance(top_n=10)

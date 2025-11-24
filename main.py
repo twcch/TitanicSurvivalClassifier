@@ -5,8 +5,8 @@ from core.models.model_factory import ModelFactory
 
 def main():
     # ========== 選擇模型 ==========
-    # 可用模型: "decision_tree", "random_forest"
-    MODEL_TYPE = "decision_tree"  # 🔧 在這裡切換模型
+    # 可用模型: "decision_tree", "random_forest", "xgboost"
+    MODEL_TYPE = "xgboost"  # 🔧 在這裡切換模型
 
     # ========== 超參數調優設定 ==========
     USE_TUNING = True
