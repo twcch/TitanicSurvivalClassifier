@@ -12,17 +12,31 @@ from core.features.feature_engineer import (
     FeatureEngineerPipeline,
     OneHotEncoder,
 )
-from core.models.decision_tree_classifier_model import DecisionTreeClassifierModel
+from core.models.model_factory import ModelFactory
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
 
 class MLPipeline:
-    def __init__(self, use_tuning: bool = True, tuning_method: str = "grid"):
+    def __init__(
+        self,
+        model_type: str = "decision_tree",
+        use_tuning: bool = True,
+        tuning_method: str = "grid",
+    ):
+        """
+        初始化 ML Pipeline
+
+        Args:
+            model_type: 模型類型 ("decision_tree", "random_forest", 等)
+            use_tuning: 是否使用超參數調優
+            tuning_method: 調優方法 ("grid" 或 "random")
+        """
+        self.model_type = model_type
         self.data_loader = DataLoader()
 
         preprocessing_steps = [
-            # 先移除不需要的欄位
             DropColumnsPreprocessor(
                 columns_to_drop=["PassengerId", "Name", "Ticket", "Cabin"]
             ),
@@ -39,8 +53,12 @@ class MLPipeline:
             steps=feature_engineering_steps
         )
 
-        self.model = DecisionTreeClassifierModel(
-            use_tuning=use_tuning, tuning_method=tuning_method, cv=5
+        # 使用工廠模式創建模型
+        self.model = ModelFactory.create_model(
+            model_type=model_type,
+            use_tuning=use_tuning,
+            tuning_method=tuning_method,
+            cv=5,
         )
 
         # 生成唯一的實驗資料夾名稱
@@ -49,41 +67,30 @@ class MLPipeline:
     def _create_experiment_dir(self) -> str:
         """
         建立唯一的實驗資料夾
-        格式: results_YYYYMMDDHHMMSS_xxx_N
-        xxx: 毫秒
-        N: 流水序號
-
-        Returns:
-            str: 實驗資料夾路徑
+        格式: results_MODELTYPE_YYYYMMDDHHMMSS_xxx_N
         """
         base_dir = Path("outputs")
         base_dir.mkdir(exist_ok=True)
 
-        # 生成時間戳記 (含毫秒)
         now = datetime.now()
         timestamp = now.strftime("%Y%m%d%H%M%S")
-        milliseconds = now.strftime("%f")[:3]  # 取前三位毫秒
+        milliseconds = now.strftime("%f")[:3]
 
-        # 找出同一秒內的流水序號
         sequence = 0
         while True:
-            dir_name = f"results_{timestamp}{milliseconds}{sequence}"
+            dir_name = f"results_{self.model_type}_{timestamp}{milliseconds}{sequence}"
             experiment_path = base_dir / dir_name
 
             if not experiment_path.exists():
                 experiment_path.mkdir(parents=True)
                 print(f"\n📁 建立實驗資料夾: {experiment_path}")
+                print(f"📊 使用模型: {self.model_type.upper()}")
                 return str(experiment_path)
 
             sequence += 1
 
     def run_training_pipeline(self, train_path: str):
-        """
-        執行訓練流程
-
-        Args:
-            train_path: 訓練資料路徑
-        """
+        """執行訓練流程"""
         df = self.data_loader.load_data(train_path)
 
         y = df["Survived"]
@@ -92,18 +99,16 @@ class MLPipeline:
         X = self.preprocessing_pipeline.fit_transform(X)
         X = self.feature_engineer_pipeline.fit_transform(X)
 
-        # 4. 分割訓練集與驗證集
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, test_size=0.2, random_state=42, stratify=y
         )
 
-        # 5. 訓練模型
+        # 訓練模型
         self.model.train((X_train, y_train))
 
-        # 6. 評估模型
+        # 評估模型
         metrics = self.model.evaluate((X_val, y_val))
 
-        # 7. 印出評估結果
         print("\n" + "=" * 50)
         print("模型評估結果 (Model Evaluation Results)")
         print("=" * 50)
@@ -112,9 +117,16 @@ class MLPipeline:
         print("=" * 50 + "\n")
 
         print("使用最佳參數在全部資料上重新訓練...")
-        # 建立新模型使用最佳參數
+
+        # 根據模型類型選擇對應的類別
         if self.model.best_params:
-            best_model = DecisionTreeClassifier(**self.model.best_params)
+            if self.model_type == "decision_tree":
+                best_model = DecisionTreeClassifier(**self.model.best_params)
+            elif self.model_type == "random_forest":
+                best_model = RandomForestClassifier(**self.model.best_params)
+            else:
+                best_model = self.model.model.__class__(**self.model.best_params)
+
             best_model.fit(X, y)
             self.model.model = best_model
             if hasattr(X, "columns"):
@@ -122,22 +134,25 @@ class MLPipeline:
         else:
             self.model.train((X, y))
 
-        # 8. 儲存模型到實驗資料夾
-        model_path = os.path.join(self.experiment_dir, "decision_tree_model.pkl")
+        # 儲存模型
+        model_filename = f"{self.model_type}_model.pkl"
+        model_path = os.path.join(self.experiment_dir, model_filename)
         self.model.save_model(model_path)
         print(f"✅ 模型已儲存至 {model_path}")
 
-        # 9. 視覺化決策樹
+        # 視覺化
         print("\n" + "=" * 50)
         print("生成視覺化圖表...")
         print("=" * 50)
-        tree_path = os.path.join(self.experiment_dir, "decision_tree.png")
+
+        tree_filename = f"{self.model_type}_visualization.png"
+        tree_path = os.path.join(self.experiment_dir, tree_filename)
         importance_path = os.path.join(self.experiment_dir, "feature_importance.png")
 
         self.model.visualize_tree(tree_path)
         self.model.visualize_feature_importance(importance_path)
 
-        # 10. 印出特徵重要性
+        # 特徵重要性
         importance = self.model.get_feature_importance(top_n=10)
         if importance:
             print("\n特徵重要性 (Top 10):")
@@ -146,7 +161,7 @@ class MLPipeline:
                 print(f"{i:2d}. {feature:30s}: {score:.4f}")
             print("=" * 50 + "\n")
 
-        # 11. 儲存實驗報告
+        # 儲存實驗報告
         self._save_experiment_report(metrics, importance)
 
         return metrics
@@ -154,42 +169,26 @@ class MLPipeline:
     def run_inference_pipeline(
         self, model_path: str, test_path: str, output_path: str = None
     ):
-        """
-        執行推論流程
-
-        Args:
-            model_path: 模型路徑（如果是相對路徑，會在實驗資料夾中尋找）
-            test_path: 測試資料路徑
-            output_path: 輸出路徑（如果為 None，會自動在實驗資料夾中生成）
-        """
-        # 如果沒有指定輸出路徑，使用實驗資料夾
+        """執行推論流程"""
         if output_path is None:
             output_path = os.path.join(self.experiment_dir, "submission.csv")
 
-        # 載入測試資料
         df = self.data_loader.load_data(test_path)
-
-        # 保存 PassengerId
         passenger_ids = df["PassengerId"].copy()
 
-        # 移除 PassengerId 進行預測
         if "PassengerId" in df.columns:
             df = df.drop(columns=["PassengerId"])
 
-        # 前處理和特徵工程
         df = self.preprocessing_pipeline.transform(df)
         df = self.feature_engineer_pipeline.transform(df)
 
-        # 載入模型並預測
         self.model.load_model(model_path)
         predictions = self.model.predict(df)
 
-        # 建立提交檔案
         submission = pd.DataFrame(
             {"PassengerId": passenger_ids, "Survived": predictions}
         )
 
-        # 儲存結果
         submission.to_csv(output_path, index=False)
         print(f"\n✅ 預測完成！結果已儲存至 {output_path}")
         print(f"\n預測結果前 10 筆：")
@@ -201,13 +200,7 @@ class MLPipeline:
         return submission
 
     def _save_experiment_report(self, metrics: dict, feature_importance: dict):
-        """
-        儲存實驗報告
-
-        Args:
-            metrics: 評估指標
-            feature_importance: 特徵重要性
-        """
+        """儲存實驗報告"""
         report_path = os.path.join(self.experiment_dir, "experiment_report.txt")
 
         with open(report_path, "w", encoding="utf-8") as f:
@@ -215,11 +208,10 @@ class MLPipeline:
             f.write("實驗報告 (Experiment Report)\n")
             f.write("=" * 60 + "\n\n")
 
-            # 實驗資訊
             f.write(f"實驗時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"實驗資料夾: {self.experiment_dir}\n\n")
+            f.write(f"實驗資料夾: {self.experiment_dir}\n")
+            f.write(f"模型類型: {self.model_type.upper()}\n\n")
 
-            # 模型設定
             f.write("-" * 60 + "\n")
             f.write("模型設定\n")
             f.write("-" * 60 + "\n")
@@ -229,7 +221,6 @@ class MLPipeline:
                 f.write(f"交叉驗證折數: {self.model.cv}\n")
             f.write("\n")
 
-            # 最佳參數
             if self.model.best_params:
                 f.write("-" * 60 + "\n")
                 f.write("最佳超參數\n")
@@ -238,7 +229,6 @@ class MLPipeline:
                     f.write(f"  {param:30s}: {value}\n")
                 f.write("\n")
 
-            # 評估指標
             f.write("-" * 60 + "\n")
             f.write("模型評估結果\n")
             f.write("-" * 60 + "\n")
@@ -246,7 +236,6 @@ class MLPipeline:
                 f.write(f"  {metric_name:15s}: {metric_value:.4f}\n")
             f.write("\n")
 
-            # 特徵重要性
             if feature_importance:
                 f.write("-" * 60 + "\n")
                 f.write("特徵重要性 (Top 10)\n")
