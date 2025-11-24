@@ -2,7 +2,12 @@ from core.pipeline.ml_pipeline import MLPipeline
 
 
 def main():
-    ml = MLPipeline()
+    # 使用超參數調優 (Grid Search)
+    # 若要使用 Random Search (更快但可能略不準確)
+    # ml = MLPipeline(use_tuning=True, tuning_method="random")
+    # 若要關閉超參數調優
+    # ml = MLPipeline(use_tuning=False)
+    ml = MLPipeline(use_tuning=True, tuning_method="grid")
     
     # 訓練模型
     print("=" * 50)

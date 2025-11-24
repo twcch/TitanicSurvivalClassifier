@@ -10,11 +10,12 @@ from core.features.feature_engineer import (
     OneHotEncoder,
 )
 from core.models.decision_tree_classifier_model import DecisionTreeClassifierModel
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 
 
 class MLPipeline:
-    def __init__(self):
+    def __init__(self, use_tuning: bool = True, tuning_method: str = "grid"):
         self.data_loader = DataLoader()
 
         preprocessing_steps = [
@@ -33,7 +34,11 @@ class MLPipeline:
             steps=feature_engineering_steps
         )
 
-        self.model = DecisionTreeClassifierModel()
+        self.model = DecisionTreeClassifierModel(
+            use_tuning=use_tuning,
+            tuning_method=tuning_method,
+            cv=5
+        )
 
     def run_training_pipeline(self, train_path: str):
         df = self.data_loader.load_data(train_path)
@@ -63,7 +68,16 @@ class MLPipeline:
             print(f"{metric_name:12s}: {metric_value:.4f}")
         print("=" * 50 + "\n")
 
-        self.model.train((X, y))
+        print("使用最佳參數在全部資料上重新訓練...")
+        # 建立新模型使用最佳參數
+        if self.model.best_params:
+            best_model = DecisionTreeClassifier(**self.model.best_params)
+            best_model.fit(X, y)
+            self.model.model = best_model
+            if hasattr(X, 'columns'):
+                self.model.feature_names = X.columns.tolist()
+        else:
+            self.model.train((X, y))
 
         self.model.save_model("outputs/decision_tree_model.pkl")
         
